@@ -63,6 +63,7 @@ Les binaires Windows officiels sont produits a distance depuis GitHub et publies
 
 - Aucun `.exe` n'est conserve dans le depot.
 - Les repertoires `build/`, `dist/` et le fichier `RomPatcher.spec` sont des artefacts locaux ignores.
+- Les releases publient un seul fichier Windows : `RomPatcher-vX.Y.Z-win64.exe`.
 - Le bouton `Mise a jour` de l'application packagée telecharge les nouvelles versions depuis les releases publiques.
 
 ## Workflow de release

@@ -55,20 +55,15 @@ jobs:
           $version = (python -c "import sys; sys.path.insert(0, 'src'); from rompatcher.version import APP_VERSION; print(APP_VERSION)").Trim()
           $assetName = "RomPatcher-v$version-win64.exe"
           Copy-Item "dist\RomPatcher.exe" "dist\$assetName" -Force
-          $hash = (Get-FileHash "dist\$assetName" -Algorithm SHA256).Hash.ToLower()
-          Set-Content -Path "dist\$assetName.sha256" -Value $hash -Encoding ascii
           "version=$version" >> $env:GITHUB_OUTPUT
           "asset_name=$assetName" >> $env:GITHUB_OUTPUT
           "asset_path=dist/$assetName" >> $env:GITHUB_OUTPUT
-          "checksum_path=dist/$assetName.sha256" >> $env:GITHUB_OUTPUT
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: RomPatcher-v${{ steps.package.outputs.version }}-win64
-          path: |
-            ${{ steps.package.outputs.asset_path }}
-            ${{ steps.package.outputs.checksum_path }}
+          path: ${{ steps.package.outputs.asset_path }}
           if-no-files-found: error
 
       - name: Create GitHub release
@@ -76,7 +71,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: RomPatcher ${{ steps.package.outputs.version }}
-          files: |
-            ${{ steps.package.outputs.asset_path }}
-            ${{ steps.package.outputs.checksum_path }}
+          files: ${{ steps.package.outputs.asset_path }}
           generate_release_notes: true
