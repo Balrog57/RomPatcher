@@ -47,6 +47,7 @@ class ScrollableNotebookFrame(ttk.Frame):
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
+        self._scrollbar_visible = True
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         self.content = ttk.Frame(self.canvas, padding=(0, 0, 8, 0), style="Shell.TFrame")
@@ -61,9 +62,11 @@ class ScrollableNotebookFrame(ttk.Frame):
 
     def _on_content_configure(self, _event=None) -> None:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self._update_scrollbar_visibility()
 
     def _on_canvas_configure(self, event) -> None:
         self.canvas.itemconfigure(self._window, width=event.width)
+        self._update_scrollbar_visibility()
 
     def _bind_mousewheel(self, _event=None) -> None:
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
@@ -74,6 +77,20 @@ class ScrollableNotebookFrame(ttk.Frame):
     def _on_mousewheel(self, event) -> None:
         if event.delta:
             self.canvas.yview_scroll(int(-event.delta / 120), "units")
+
+    def _update_scrollbar_visibility(self) -> None:
+        bbox = self.canvas.bbox("all")
+        if bbox is None:
+            return
+        content_height = bbox[3] - bbox[1]
+        canvas_height = max(self.canvas.winfo_height(), 1)
+        needs_scrollbar = content_height > canvas_height + 4
+        if needs_scrollbar and not self._scrollbar_visible:
+            self.scrollbar.grid()
+            self._scrollbar_visible = True
+        elif not needs_scrollbar and self._scrollbar_visible:
+            self.scrollbar.grid_remove()
+            self._scrollbar_visible = False
 
 
 class RomPatcherApp:
@@ -145,6 +162,20 @@ class RomPatcherApp:
         style.configure("Accent.TButton", font=("Bahnschrift", 10, "bold"))
         style.configure("TNotebook", background="#eadfce", borderwidth=0)
         style.configure("TNotebook.Tab", padding=(16, 10), font=("Bahnschrift", 10))
+        style.configure("Workspace.TNotebook", background="#eadfce", borderwidth=0, tabmargins=(0, 8, 0, 0))
+        style.configure(
+            "Workspace.TNotebook.Tab",
+            padding=(22, 12),
+            font=("Bahnschrift", 11, "bold"),
+            background="#c9bba3",
+            foreground="#22333b",
+            borderwidth=0,
+        )
+        style.map(
+            "Workspace.TNotebook.Tab",
+            background=[("selected", "#f9f4ec"), ("active", "#ddcfb8")],
+            foreground=[("selected", "#18252c"), ("active", "#18252c")],
+        )
         style.configure("TLabelframe", background="#f9f4ec")
         style.configure("TLabelframe.Label", background="#f9f4ec", foreground="#22333b", font=("Bahnschrift", 10, "bold"))
 
@@ -153,7 +184,8 @@ class RomPatcherApp:
         shell.pack(fill="both", expand=True)
         shell.columnconfigure(0, weight=1)
         shell.rowconfigure(1, weight=5)
-        shell.rowconfigure(2, weight=2, minsize=220)
+        shell.rowconfigure(2, weight=2, minsize=200)
+        shell.rowconfigure(3, weight=0)
         self.shell_frame = shell
 
         header = ttk.Frame(shell, style="Shell.TFrame")
@@ -175,7 +207,7 @@ class RomPatcherApp:
         self.workspace_frame.columnconfigure(0, weight=1)
         self.workspace_frame.rowconfigure(0, weight=1)
 
-        self.workspace_notebook = ttk.Notebook(self.workspace_frame)
+        self.workspace_notebook = ttk.Notebook(self.workspace_frame, style="Workspace.TNotebook")
         self.workspace_notebook.grid(row=0, column=0, sticky="nsew")
 
         self.apply_tab = ScrollableNotebookFrame(self.workspace_notebook)
@@ -204,7 +236,7 @@ class RomPatcherApp:
             info_card,
             wrap="word",
             font=("Consolas", 10),
-            height=10,
+            height=8,
             bg="#fffdf8",
             fg="#22333b",
             insertbackground="#22333b",
@@ -222,7 +254,7 @@ class RomPatcherApp:
             log_card,
             wrap="word",
             font=("Consolas", 10),
-            height=10,
+            height=8,
             bg="#1d2b31",
             fg="#f4efe4",
             insertbackground="#f4efe4",
@@ -232,14 +264,15 @@ class RomPatcherApp:
         self.log_text.configure(state="disabled")
 
         footer = ttk.Frame(shell, style="Shell.TFrame")
-        footer.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        footer.grid(row=3, column=0, sticky="ew", pady=(12, 0))
         footer.columnconfigure(0, weight=1)
-        footer.columnconfigure(3, weight=3)
+        self.footer_frame = footer
         ttk.Label(footer, textvariable=self.status_var, style="Subhead.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(footer, text=f"v{APP_VERSION}", style="Subhead.TLabel").grid(row=0, column=1, sticky="e", padx=(12, 0))
         self.update_button = ttk.Button(footer, text="Mise à jour", command=lambda: self._check_for_updates(automatic=False))
         self.update_button.grid(row=0, column=2, sticky="e", padx=(12, 0))
-        ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0).grid(row=0, column=3, sticky="ew", padx=(12, 0))
+        self.progress_bar = ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0, length=220)
+        self.progress_bar.grid(row=0, column=3, sticky="e", padx=(12, 0))
         self._action_buttons.append(self.update_button)
 
     def _build_apply_tab(self, parent: ttk.Frame) -> None:

@@ -69,11 +69,15 @@ class GuiTests(unittest.TestCase):
         self.root.update_idletasks()
         self.assertEqual(self.app.shell_frame.grid_rowconfigure(1)["weight"], 5)
         self.assertEqual(self.app.shell_frame.grid_rowconfigure(2)["weight"], 2)
+        self.assertEqual(self.app.shell_frame.grid_rowconfigure(3)["weight"], 0)
         self.assertEqual(self.app.workspace_notebook.index("end"), 3)
+        self.assertEqual(str(self.app.workspace_notebook.cget("style")), "Workspace.TNotebook")
         self.assertIsInstance(self.app.apply_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.create_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.tools_tab, ScrollableNotebookFrame)
-        self.assertEqual(self.app.update_button.cget("text"), "Mise à jour")
+        self.assertEqual(int(self.app.bottom_frame.grid_info()["row"]), 2)
+        self.assertEqual(int(self.app.footer_frame.grid_info()["row"]), 3)
+        self.assertEqual(int(self.app.progress_bar.cget("length")), 220)
 
     def test_apply_output_suggestion_switches_smc_to_sfc(self) -> None:
         self.app.apply_rom_var.set(str(Path("C:/tmp/game.smc")))
