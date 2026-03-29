@@ -36,7 +36,7 @@ def bump_version(version: str) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Met à jour la version de RomPatcher Desktop.")
-    parser.add_argument("version", help="Nouvelle version sémantique, par exemple 0.2.0")
+    parser.add_argument("version", help="Nouvelle version sémantique, par exemple 1.0.0")
     return parser
 
 

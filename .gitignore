@@ -7,3 +7,5 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+*.spec
+Création d'un module Python pour patcher ROMs.docx

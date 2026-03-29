@@ -5,6 +5,8 @@ import tkinter as tk
 import traceback
 import unittest
 from pathlib import Path
+from tkinter import ttk
+from tkinter.scrolledtext import ScrolledText
 from unittest.mock import patch
 
 
@@ -13,7 +15,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from rompatcher.gui import RomPatcherApp, ScrollableNotebookFrame
+from rompatcher.gui import RomPatcherApp
 from rompatcher.n64 import detect_n64_byte_order
 
 
@@ -25,6 +27,14 @@ def _ensure_tk_available() -> None:
         root.destroy()
     except tk.TclError as exc:
         raise unittest.SkipTest(f"Tk indisponible pour les tests GUI : {exc}") from exc
+
+
+def _normalize_padding(root: tk.Tk, value) -> tuple[int, int, int, int]:
+    if isinstance(value, str):
+        parts = [int(float(part)) for part in root.tk.splitlist(value)]
+    else:
+        parts = [int(part) for part in value]
+    return tuple(parts[:4])
 
 
 class GuiTests(unittest.TestCase):
@@ -72,12 +82,29 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(self.app.shell_frame.grid_rowconfigure(3)["weight"], 0)
         self.assertEqual(self.app.workspace_notebook.index("end"), 3)
         self.assertEqual(str(self.app.workspace_notebook.cget("style")), "Workspace.TNotebook")
-        self.assertIsInstance(self.app.apply_tab, ScrollableNotebookFrame)
-        self.assertIsInstance(self.app.create_tab, ScrollableNotebookFrame)
-        self.assertIsInstance(self.app.tools_tab, ScrollableNotebookFrame)
+        self.assertIsInstance(self.app.apply_tab, ttk.Frame)
+        self.assertIsInstance(self.app.create_tab, ttk.Frame)
+        self.assertIsInstance(self.app.tools_tab, ttk.Frame)
+        self.assertFalse(hasattr(self.app.apply_tab, "canvas"))
+        self.assertFalse(hasattr(self.app.create_tab, "canvas"))
+        self.assertFalse(hasattr(self.app.tools_tab, "canvas"))
         self.assertEqual(int(self.app.bottom_frame.grid_info()["row"]), 2)
         self.assertEqual(int(self.app.footer_frame.grid_info()["row"]), 3)
         self.assertEqual(int(self.app.progress_bar.cget("length")), 220)
+
+    def test_workspace_tabs_have_equal_visual_width(self) -> None:
+        self.root.update_idletasks()
+        style = ttk.Style()
+        self.assertEqual(int(style.lookup("Workspace.TNotebook.Tab", "width")), 12)
+        padding_map = dict(style.map("Workspace.TNotebook.Tab", "padding"))
+        self.assertEqual(_normalize_padding(self.root, padding_map.get("selected", ())), (22, 12, 22, 12))
+        self.assertEqual(_normalize_padding(self.root, padding_map.get("active", ())), (22, 12, 22, 12))
+
+    def test_only_bottom_panels_are_scrollable(self) -> None:
+        self.assertIsInstance(self.app.info_text, ScrolledText)
+        self.assertIsInstance(self.app.log_text, ScrolledText)
+        self.assertIsInstance(self.app.create_description_text, tk.Text)
+        self.assertNotEqual(type(self.app.create_description_text).__name__, "ScrolledText")
 
     def test_apply_output_suggestion_switches_smc_to_sfc(self) -> None:
         self.app.apply_rom_var.set(str(Path("C:/tmp/game.smc")))

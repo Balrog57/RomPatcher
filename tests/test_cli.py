@@ -17,6 +17,7 @@ from rompatcher.cli import main
 from rompatcher.core import create_patch
 from rompatcher.models import PatchMetadata
 from rompatcher.n64 import detect_n64_byte_order
+from rompatcher.version import APP_VERSION
 
 
 class CLITests(unittest.TestCase):
@@ -40,7 +41,7 @@ class CLITests(unittest.TestCase):
             with redirect_stdout(stdout):
                 main(["--version"])
         self.assertEqual(exit_info.exception.code, 0)
-        self.assertIn("0.2.0", stdout.getvalue())
+        self.assertIn(APP_VERSION, stdout.getvalue())
 
     def test_inspect_command_prints_metadata(self) -> None:
         original = _write_temp_file("cli_inspect_original.bin", b"ABCDEFGH")

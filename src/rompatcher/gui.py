@@ -75,6 +75,8 @@ class ScrollableNotebookFrame(ttk.Frame):
         self.canvas.unbind_all("<MouseWheel>")
 
     def _on_mousewheel(self, event) -> None:
+        if not self._scrollbar_visible:
+            return
         if event.delta:
             self.canvas.yview_scroll(int(-event.delta / 120), "units")
 
@@ -89,6 +91,7 @@ class ScrollableNotebookFrame(ttk.Frame):
             self.scrollbar.grid()
             self._scrollbar_visible = True
         elif not needs_scrollbar and self._scrollbar_visible:
+            self.canvas.yview_moveto(0.0)
             self.scrollbar.grid_remove()
             self._scrollbar_visible = False
 
@@ -165,7 +168,8 @@ class RomPatcherApp:
         style.configure("Workspace.TNotebook", background="#eadfce", borderwidth=0, tabmargins=(0, 8, 0, 0))
         style.configure(
             "Workspace.TNotebook.Tab",
-            padding=(22, 12),
+            padding=(22, 12, 22, 12),
+            width=12,
             font=("Bahnschrift", 11, "bold"),
             background="#c9bba3",
             foreground="#22333b",
@@ -175,6 +179,7 @@ class RomPatcherApp:
             "Workspace.TNotebook.Tab",
             background=[("selected", "#f9f4ec"), ("active", "#ddcfb8")],
             foreground=[("selected", "#18252c"), ("active", "#18252c")],
+            padding=[("selected", (22, 12, 22, 12)), ("active", (22, 12, 22, 12))],
         )
         style.configure("TLabelframe", background="#f9f4ec")
         style.configure("TLabelframe.Label", background="#f9f4ec", foreground="#22333b", font=("Bahnschrift", 10, "bold"))
@@ -210,16 +215,16 @@ class RomPatcherApp:
         self.workspace_notebook = ttk.Notebook(self.workspace_frame, style="Workspace.TNotebook")
         self.workspace_notebook.grid(row=0, column=0, sticky="nsew")
 
-        self.apply_tab = ScrollableNotebookFrame(self.workspace_notebook)
-        self.create_tab = ScrollableNotebookFrame(self.workspace_notebook)
-        self.tools_tab = ScrollableNotebookFrame(self.workspace_notebook)
+        self.apply_tab = ttk.Frame(self.workspace_notebook, style="Shell.TFrame")
+        self.create_tab = ttk.Frame(self.workspace_notebook, style="Shell.TFrame")
+        self.tools_tab = ttk.Frame(self.workspace_notebook, style="Shell.TFrame")
         self.workspace_notebook.add(self.apply_tab, text="Appliquer")
         self.workspace_notebook.add(self.create_tab, text="Créer")
         self.workspace_notebook.add(self.tools_tab, text="Outils")
 
-        self._build_apply_tab(self.apply_tab.content)
-        self._build_create_tab(self.create_tab.content)
-        self._build_tools_tab(self.tools_tab.content)
+        self._build_apply_tab(self.apply_tab)
+        self._build_create_tab(self.create_tab)
+        self._build_tools_tab(self.tools_tab)
 
         self.bottom_frame = ttk.Frame(shell, style="Shell.TFrame")
         self.bottom_frame.grid(row=2, column=0, sticky="nsew", pady=(12, 0))
@@ -387,7 +392,18 @@ class RomPatcherApp:
         ttk.Label(meta, text="Auteur").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Entry(meta, textvariable=self.create_author_var).grid(row=1, column=1, sticky="ew", pady=4)
         ttk.Label(meta, text="Description").grid(row=2, column=0, sticky="nw", padx=(0, 8), pady=4)
-        self.create_description_text = ScrolledText(meta, height=4, wrap="word", font=("Segoe UI", 10))
+        self.create_description_text = tk.Text(
+            meta,
+            height=4,
+            wrap="word",
+            font=("Segoe UI", 10),
+            bg="#fffdf8",
+            fg="#22333b",
+            insertbackground="#22333b",
+            relief="solid",
+            borderwidth=1,
+            highlightthickness=0,
+        )
         self.create_description_text.grid(row=2, column=1, sticky="ew", pady=4)
 
         self.create_button = ttk.Button(form, text="Créer le patch", style="Accent.TButton", command=self._create_patch)
