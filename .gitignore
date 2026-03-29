@@ -9,3 +9,4 @@ dist/
 *.egg-info/
 *.spec
 Création d'un module Python pour patcher ROMs.docx
+tools/

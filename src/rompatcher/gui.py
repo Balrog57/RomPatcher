@@ -8,6 +8,8 @@ from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .core import apply_patch, create_patch, inspect_patch
+from .dependencies import install_xdelta3
+from .exceptions import DependencyMissingError
 from .models import PatchMetadata
 from .n64 import convert_n64_byte_order, default_n64_output_path
 from .updater import (
@@ -919,7 +921,50 @@ class RomPatcherApp:
         self._append_log(f"[OK] ROM N64 convertie : {output_path}")
         messagebox.showinfo("Conversion terminée", f"Fichier généré :\n{output_path}")
 
+    def _handle_missing_dependency(self, exc: Exception) -> bool:
+        if not isinstance(exc, DependencyMissingError):
+            return False
+        if "xdelta" not in str(exc).lower():
+            return False
+
+        self._set_busy(False)
+        self.progress_var.set(0.0)
+        self.status_var.set("xdelta3 requis pour ce patch.")
+        self._append_log(f"[INFO] {exc}")
+
+        install_now = messagebox.askyesno(
+            "xdelta3 manquant",
+            "Ce patch requiert xdelta3.exe.\n\n"
+            "Voulez-vous le télécharger et l'installer automatiquement maintenant ?",
+        )
+        if not install_now:
+            messagebox.showerror(
+                "xdelta3 manquant",
+                "Installez xdelta3.exe dans le PATH, à côté de l'application, ou dans un dossier tools/.",
+            )
+            return True
+
+        self.status_var.set("Installation de xdelta3 en cours...")
+        self._append_log("[INFO] Téléchargement de xdelta3 depuis la release officielle.")
+
+        def action():
+            return install_xdelta3(
+                progress=lambda value, message=None: self.root.after(0, self._on_progress, value, message),
+            )
+
+        def success(installed_path: Path) -> None:
+            self._set_busy(False)
+            self.progress_var.set(1.0)
+            self.status_var.set("xdelta3 installé. Nouvelle tentative...")
+            self._append_log(f"[OK] xdelta3 installé : {installed_path}")
+            self.root.after(100, self._apply_patch)
+
+        self._run_async(action, success)
+        return True
+
     def _on_failure(self, exc: Exception, trace: str) -> None:
+        if self._handle_missing_dependency(exc):
+            return
         self._set_busy(False)
         self.progress_var.set(0.0)
         self.status_var.set("Opération échouée.")

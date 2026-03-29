@@ -10,6 +10,7 @@ Patcher Windows autonome pour appliquer, creer, analyser et convertir des patchs
 - Analyse rapide du patch charge avec affichage du format, des validations et des metadonnees.
 - Creation et application de patchs sans hebergement.
 - Verification de mises a jour et auto-update depuis les releases GitHub.
+- Proposition d'installation automatique de `xdelta3.exe` quand un patch `.xdelta` / `VCDiff` l'exige.
 - Outil N64 pour convertir le byte order (`z64`, `v64`, `n64`).
 - CLI pour inspecter, appliquer, creer et convertir.
 
@@ -107,4 +108,10 @@ python -m pip install bsdiff4
 
 ### xdelta / VCDiff
 
-Placez `xdelta3.exe` dans le `PATH` de Windows, à cote de `RomPatcher.exe`, ou dans un dossier `tools/` voisin de l'application.
+RomPatcher peut proposer le téléchargement automatique de `xdelta3.exe` quand un patch `VCDiff / xdelta` en a besoin.
+
+En manuel, vous pouvez aussi placer `xdelta3.exe` :
+
+- dans le `PATH` de Windows
+- à cote de `RomPatcher.exe`
+- dans un dossier `tools/` voisin de l'application

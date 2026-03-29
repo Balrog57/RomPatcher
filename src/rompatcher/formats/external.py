@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from ..dependencies import xdelta_install_path
 from ..exceptions import DependencyMissingError
 from .base import BasePatch, ProgressCallback, report_progress
 
@@ -72,6 +73,7 @@ class VCDiffPatch(BasePatch):
             roots.append(Path(meipass))
 
         roots.append(Path(__file__).resolve().parents[3])
+        roots.append(xdelta_install_path().parent)
 
         if source_path is not None:
             roots.append(source_path.resolve().parent)
