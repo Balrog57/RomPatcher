@@ -65,10 +65,11 @@ class GuiTests(unittest.TestCase):
             success_callback(result)
         self.root.update_idletasks()
 
-    def test_layout_uses_paned_workspace_and_scrollable_tabs(self) -> None:
-        self.app._position_main_sash()
+    def test_layout_keeps_notebook_visible_and_weighted(self) -> None:
         self.root.update_idletasks()
-        self.assertEqual(len(self.app.main_paned.panes()), 2)
+        self.assertEqual(self.app.shell_frame.grid_rowconfigure(1)["weight"], 5)
+        self.assertEqual(self.app.shell_frame.grid_rowconfigure(2)["weight"], 2)
+        self.assertEqual(self.app.workspace_notebook.index("end"), 3)
         self.assertIsInstance(self.app.apply_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.create_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.tools_tab, ScrollableNotebookFrame)

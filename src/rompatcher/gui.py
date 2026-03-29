@@ -152,7 +152,9 @@ class RomPatcherApp:
         shell = ttk.Frame(self.root, padding=18, style="Shell.TFrame")
         shell.pack(fill="both", expand=True)
         shell.columnconfigure(0, weight=1)
-        shell.rowconfigure(1, weight=1)
+        shell.rowconfigure(1, weight=5)
+        shell.rowconfigure(2, weight=2, minsize=220)
+        self.shell_frame = shell
 
         header = ttk.Frame(shell, style="Shell.TFrame")
         header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -168,33 +170,30 @@ class RomPatcherApp:
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
 
-        self.main_paned = ttk.Panedwindow(shell, orient="vertical")
-        self.main_paned.grid(row=1, column=0, sticky="nsew")
-
-        self.workspace_frame = ttk.Frame(self.main_paned, style="Shell.TFrame")
+        self.workspace_frame = ttk.Frame(shell, style="Shell.TFrame")
+        self.workspace_frame.grid(row=1, column=0, sticky="nsew")
         self.workspace_frame.columnconfigure(0, weight=1)
         self.workspace_frame.rowconfigure(0, weight=1)
-        self.main_paned.add(self.workspace_frame, weight=5)
 
-        notebook = ttk.Notebook(self.workspace_frame)
-        notebook.grid(row=0, column=0, sticky="nsew")
+        self.workspace_notebook = ttk.Notebook(self.workspace_frame)
+        self.workspace_notebook.grid(row=0, column=0, sticky="nsew")
 
-        self.apply_tab = ScrollableNotebookFrame(notebook)
-        self.create_tab = ScrollableNotebookFrame(notebook)
-        self.tools_tab = ScrollableNotebookFrame(notebook)
-        notebook.add(self.apply_tab, text="Appliquer")
-        notebook.add(self.create_tab, text="Créer")
-        notebook.add(self.tools_tab, text="Outils")
+        self.apply_tab = ScrollableNotebookFrame(self.workspace_notebook)
+        self.create_tab = ScrollableNotebookFrame(self.workspace_notebook)
+        self.tools_tab = ScrollableNotebookFrame(self.workspace_notebook)
+        self.workspace_notebook.add(self.apply_tab, text="Appliquer")
+        self.workspace_notebook.add(self.create_tab, text="Créer")
+        self.workspace_notebook.add(self.tools_tab, text="Outils")
 
         self._build_apply_tab(self.apply_tab.content)
         self._build_create_tab(self.create_tab.content)
         self._build_tools_tab(self.tools_tab.content)
 
-        self.bottom_frame = ttk.Frame(self.main_paned, style="Shell.TFrame")
+        self.bottom_frame = ttk.Frame(shell, style="Shell.TFrame")
+        self.bottom_frame.grid(row=2, column=0, sticky="nsew", pady=(12, 0))
         self.bottom_frame.columnconfigure(0, weight=3)
         self.bottom_frame.columnconfigure(1, weight=2)
         self.bottom_frame.rowconfigure(0, weight=1)
-        self.main_paned.add(self.bottom_frame, weight=2)
 
         info_card = ttk.Frame(self.bottom_frame, padding=16, style="Card.TFrame")
         info_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
@@ -242,17 +241,6 @@ class RomPatcherApp:
         self.update_button.grid(row=0, column=2, sticky="e", padx=(12, 0))
         ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0).grid(row=0, column=3, sticky="ew", padx=(12, 0))
         self._action_buttons.append(self.update_button)
-        self.root.after(0, self._position_main_sash)
-
-    def _position_main_sash(self) -> None:
-        self.root.update_idletasks()
-        try:
-            total_height = self.main_paned.winfo_height()
-            desired_top = max(480, int(total_height * 0.68))
-            max_top = max(total_height - 220, 320)
-            self.main_paned.sashpos(0, min(desired_top, max_top))
-        except tk.TclError:
-            pass
 
     def _build_apply_tab(self, parent: ttk.Frame) -> None:
         parent.rowconfigure(0, weight=1)
