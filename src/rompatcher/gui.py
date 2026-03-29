@@ -198,7 +198,7 @@ class RomPatcherApp:
         ttk.Label(header, text=APP_NAME, style="Headline.TLabel").pack(anchor="w")
         ttk.Label(
             header,
-            text=f"Version {APP_VERSION} - patcher Windows autonome pour appliquer, créer, analyser et convertir des patchs de ROMs et de binaires.",
+            text="Patcher Windows autonome pour appliquer, créer, analyser et convertir des patchs de ROMs et de binaires.",
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
         ttk.Label(
