@@ -1,12 +1,13 @@
 # RomPatcher Desktop
 
-Application locale Windows pour appliquer, creer et preparer des patchs de ROMs et de binaires, ecrite en Python et utilisable sans serveur.
+Patcher Windows autonome pour appliquer, creer, analyser et convertir des patchs de ROMs et de binaires, en Python, sans serveur ni hebergement.
 
 ## Fonctionnalites
 
 - Interface graphique locale avec onglets `Appliquer`, `Creer` et `Outils`.
 - Layout adaptatif : la zone haute reste fixe, seuls `Analyse et details` et `Journal` sont scrollables.
 - Glisser-deposer de fichiers sur les champs Windows.
+- Analyse rapide du patch charge avec affichage du format, des validations et des metadonnees.
 - Creation et application de patchs sans hebergement.
 - Verification de mises a jour et auto-update depuis les releases GitHub.
 - Outil N64 pour convertir le byte order (`z64`, `v64`, `n64`).

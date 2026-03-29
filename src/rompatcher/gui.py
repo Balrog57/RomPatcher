@@ -198,12 +198,12 @@ class RomPatcherApp:
         ttk.Label(header, text=APP_NAME, style="Headline.TLabel").pack(anchor="w")
         ttk.Label(
             header,
-            text=f"Version {APP_VERSION} - application locale Windows pour appliquer, créer et préparer des patchs de ROMs et de binaires.",
+            text=f"Version {APP_VERSION} - patcher Windows autonome pour appliquer, créer, analyser et convertir des patchs de ROMs et de binaires.",
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
         ttk.Label(
             header,
-            text="Astuce : vous pouvez glisser-déposer des fichiers directement sur les champs.",
+            text="Astuce : glissez-déposez vos fichiers directement sur les champs.",
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
 
