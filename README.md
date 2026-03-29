@@ -92,12 +92,12 @@ Le build se lance :
 ## Release officielle
 
 ```powershell
-python .\scripts\bump_version.py 1.1.0
+python .\scripts\bump_version.py 1.1.1
 git add .
-git commit -m "Release 1.1.0"
-git tag v1.1.0
+git commit -m "Release 1.1.1"
+git tag v1.1.1
 git push origin main
-git push origin v1.1.0
+git push origin v1.1.1
 ```
 
 ## Mise a jour automatique

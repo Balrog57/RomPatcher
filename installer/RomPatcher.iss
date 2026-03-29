@@ -26,9 +26,9 @@ PrivilegesRequired=lowest
 WizardStyle=modern
 Compression=lzma2
 SolidCompression=yes
-SetupIconFile=assets\rompatcher.ico
+SetupIconFile=..\assets\rompatcher.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-OutputDir=dist
+OutputDir=..\dist
 OutputBaseFilename=RomPatcher-Setup-v{#AppVersion}-win64
 VersionInfoDescription=RomPatcher Desktop Installer
 ChangesAssociations=no
@@ -46,7 +46,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "dist\RomPatcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\RomPatcher.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\RomPatcher Desktop"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"; Check: ShouldCreateProgramGroup
