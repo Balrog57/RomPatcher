@@ -281,7 +281,7 @@ def build_windows_installer_update_script(
         "  timeout /t 1 /nobreak >nul\n"
         "  goto waitloop\n"
         ")\n"
-        'start /wait "" "%INSTALLER%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="%APPDIR%"\n'
+        'powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -FilePath $env:INSTALLER -ArgumentList @(\'/VERYSILENT\', \'/SUPPRESSMSGBOXES\', \'/NORESTART\', \'/SP-\', \'/DIR=""\' + $env:APPDIR + \'""\') -Verb RunAs -Wait -PassThru; exit $p.ExitCode"\n'
         "if errorlevel 1 goto cleanup\n"
         f"{launch_line}\n"
         ":cleanup\n"

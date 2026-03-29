@@ -66,11 +66,12 @@ rompatcher n64-byteswap "jeu.v64" --target z64
 Les releases officielles publient maintenant un installateur Windows Inno Setup :
 
 - fichier de release : `RomPatcher-Setup-vX.Y.Z-win64.exe`
-- installation dans `%LOCALAPPDATA%\Programs\RomPatcher Desktop`
+- installation dans `C:\Program Files\RomPatcher Desktop`
 - icone integree a l'application et a l'installateur
 - dossier du menu Demarrer configurable pendant l'installation
 - option de raccourci bureau via case a cocher
 - lancement de l'application propose en fin d'installation
+- elevation administrateur demandee a l'installation et aux mises a jour
 
 L'installateur est concu pour un usage simple sans hebergement externe : tout passe par les releases GitHub publiques.
 
@@ -92,12 +93,12 @@ Le build se lance :
 ## Release officielle
 
 ```powershell
-python .\scripts\bump_version.py 1.1.1
+python .\scripts\bump_version.py 1.2.0
 git add .
-git commit -m "Release 1.1.1"
-git tag v1.1.1
+git commit -m "Release 1.2.0"
+git tag v1.2.0
 git push origin main
-git push origin v1.1.1
+git push origin v1.2.0
 ```
 
 ## Mise a jour automatique
@@ -107,7 +108,7 @@ Depuis l'application installee :
 - RomPatcher verifie la derniere release GitHub
 - telecharge l'installateur correspondant
 - ferme l'application
-- lance l'installateur en mode silencieux
+- demande l'elevation Windows si necessaire puis lance l'installateur en mode silencieux
 - relance RomPatcher une fois la mise a jour terminee
 
 Ce mecanisme reste compatible avec les anciennes releases portables, mais les nouvelles releases officielles sont basees sur l'installateur Inno Setup.
