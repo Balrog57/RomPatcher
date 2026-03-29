@@ -23,6 +23,7 @@ class ReleaseAsset:
     name: str
     download_url: str
     size: int = 0
+    kind: str = "portable"
 
 
 @dataclass(slots=True)
@@ -35,13 +36,22 @@ class ReleaseInfo:
     asset: ReleaseAsset | None = None
 
 
+def classify_windows_asset(name: str) -> str:
+    lowered = name.strip().lower()
+    if lowered.endswith(".exe") and ("setup" in lowered or "installer" in lowered):
+        return "installer"
+    if lowered.endswith(".exe"):
+        return "portable"
+    return "unknown"
+
+
 def normalize_version(value: str) -> str:
     cleaned = value.strip().lower()
     if cleaned.startswith("v"):
         cleaned = cleaned[1:]
     parts = [part for part in cleaned.split(".") if part != ""]
     if not parts or any(not part.isdigit() for part in parts):
-        raise ValueError(f"Version sémantique invalide : {value}")
+        raise ValueError(f"Version semantique invalide : {value}")
     return ".".join(str(int(part)) for part in parts)
 
 
@@ -122,18 +132,28 @@ def _release_from_payload(payload: dict[str, Any]) -> ReleaseInfo | None:
     cached_asset = payload.get("asset")
     if isinstance(cached_asset, dict) and cached_asset:
         assets = [cached_asset]
+
+    fallback_asset = None
     for candidate in assets:
         name = str(candidate.get("name", ""))
-        if name.lower().endswith(".exe") and "rompatcher" in name.lower():
+        if not name.lower().endswith(".exe") or "rompatcher" not in name.lower():
+            continue
+        if classify_windows_asset(name) == "installer":
             asset_payload = candidate
             break
+        if fallback_asset is None:
+            fallback_asset = candidate
+    if asset_payload is None:
+        asset_payload = fallback_asset
 
     asset = None
     if asset_payload:
+        asset_name = str(asset_payload.get("name", ""))
         asset = ReleaseAsset(
-            name=str(asset_payload.get("name", "")),
+            name=asset_name,
             download_url=str(asset_payload.get("browser_download_url") or asset_payload.get("download_url") or ""),
             size=int(asset_payload.get("size", 0)),
+            kind=classify_windows_asset(asset_name),
         )
 
     return ReleaseInfo(
@@ -156,13 +176,13 @@ def get_latest_release(*, force_refresh: bool = False, timeout: int = 8, cache_s
     try:
         payload = _api_request(url, timeout=timeout)
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"Impossible de vérifier les mises à jour (HTTP {exc.code}).") from exc
+        raise RuntimeError(f"Impossible de verifier les mises a jour (HTTP {exc.code}).") from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError("Impossible de contacter GitHub pour vérifier les mises à jour.") from exc
+        raise RuntimeError("Impossible de contacter GitHub pour verifier les mises a jour.") from exc
 
     release = _release_from_payload(payload)
     if release is None:
-        raise RuntimeError("Réponse GitHub invalide pour la dernière release.")
+        raise RuntimeError("Reponse GitHub invalide pour la derniere release.")
     _save_release_cache(release)
     return release
 
@@ -182,7 +202,7 @@ def download_release_asset(
     timeout: int = 120,
 ) -> Path:
     if release.asset is None or not release.asset.download_url:
-        raise RuntimeError("Aucun exécutable n'est attaché à cette release.")
+        raise RuntimeError("Aucun fichier Windows compatible n'est attache a cette release.")
 
     if destination is None:
         safe_name = release.asset.name or f"RomPatcher-{release.version}.exe"
@@ -206,11 +226,11 @@ def download_release_asset(
                 handle.write(chunk)
                 downloaded += len(chunk)
                 if total > 0:
-                    _report(progress, downloaded / total, f"Téléchargement {downloaded // 1024} / {total // 1024} Ko")
+                    _report(progress, downloaded / total, f"Telechargement {downloaded // 1024} / {total // 1024} Ko")
     except urllib.error.URLError as exc:
-        raise RuntimeError("Téléchargement de la mise à jour impossible.") from exc
+        raise RuntimeError("Telechargement de la mise a jour impossible.") from exc
 
-    _report(progress, 1.0, "Téléchargement terminé")
+    _report(progress, 1.0, "Telechargement termine")
     return destination
 
 
@@ -239,12 +259,53 @@ def build_windows_update_script(downloaded_exe: Path, current_exe: Path, *, proc
     return script_path
 
 
+def build_windows_installer_update_script(
+    downloaded_installer: Path,
+    current_exe: Path,
+    *,
+    process_id: int,
+    relaunch: bool = True,
+) -> Path:
+    script_path = Path(tempfile.gettempdir()) / f"rompatcher-installer-update-{process_id}.cmd"
+    launch_line = f'start "" "{current_exe}"' if relaunch else "rem pas de relance"
+    install_dir = current_exe.parent
+    content = (
+        "@echo off\n"
+        "setlocal\n"
+        f'set "CURRENT={current_exe}"\n'
+        f'set "INSTALLER={downloaded_installer}"\n'
+        f'set "APPDIR={install_dir}"\n'
+        ":waitloop\n"
+        f'tasklist /FI "PID eq {process_id}" | find "{process_id}" >nul\n'
+        "if not errorlevel 1 (\n"
+        "  timeout /t 1 /nobreak >nul\n"
+        "  goto waitloop\n"
+        ")\n"
+        'start /wait "" "%INSTALLER%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="%APPDIR%"\n'
+        "if errorlevel 1 goto cleanup\n"
+        f"{launch_line}\n"
+        ":cleanup\n"
+        'del "%INSTALLER%" >nul 2>nul\n'
+        'del "%~f0" >nul 2>nul\n'
+    )
+    script_path.write_text(content, encoding="utf-8", newline="\r\n")
+    return script_path
+
+
 def install_downloaded_update(downloaded_exe: Path, *, current_exe: Path | None = None, relaunch: bool = True) -> Path:
     target = current_exe or running_executable_path()
     if target is None:
-        raise RuntimeError("L'installation automatique n'est disponible que depuis l'exécutable Windows.")
+        raise RuntimeError("L'installation automatique n'est disponible que depuis l'executable Windows.")
 
-    script_path = build_windows_update_script(downloaded_exe, target, process_id=os.getpid(), relaunch=relaunch)
+    if classify_windows_asset(downloaded_exe.name) == "installer":
+        script_path = build_windows_installer_update_script(
+            downloaded_exe,
+            target,
+            process_id=os.getpid(),
+            relaunch=relaunch,
+        )
+    else:
+        script_path = build_windows_update_script(downloaded_exe, target, process_id=os.getpid(), relaunch=relaunch)
     subprocess.Popen(["cmd.exe", "/c", str(script_path)], close_fds=True)
     return script_path
 
@@ -256,6 +317,7 @@ def open_releases_page(url: str | None = None) -> None:
 __all__ = [
     "ReleaseAsset",
     "ReleaseInfo",
+    "classify_windows_asset",
     "normalize_version",
     "parse_version_tuple",
     "is_newer_version",
@@ -265,6 +327,7 @@ __all__ = [
     "find_available_update",
     "download_release_asset",
     "build_windows_update_script",
+    "build_windows_installer_update_script",
     "install_downloaded_update",
     "open_releases_page",
 ]

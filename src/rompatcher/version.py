@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 APP_NAME = "RomPatcher Desktop"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.1.0"
 GITHUB_OWNER = "Balrog57"
 GITHUB_REPO = "RomPatcher"
 GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases"

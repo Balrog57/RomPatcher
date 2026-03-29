@@ -4,15 +4,17 @@ Patcher Windows autonome pour appliquer, creer, analyser et convertir des patchs
 
 ## Fonctionnalites
 
-- Interface graphique locale avec onglets `Appliquer`, `Creer` et `Outils`.
-- Layout adaptatif : la zone haute reste fixe, seuls `Analyse et details` et `Journal` sont scrollables.
-- Glisser-deposer de fichiers sur les champs Windows.
-- Analyse rapide du patch charge avec affichage du format, des validations et des metadonnees.
-- Creation et application de patchs sans hebergement.
-- Verification de mises a jour et auto-update depuis les releases GitHub.
-- Proposition d'installation automatique de `xdelta3.exe` quand un patch `.xdelta` / `VCDiff` l'exige.
-- Outil N64 pour convertir le byte order (`z64`, `v64`, `n64`).
-- CLI pour inspecter, appliquer, creer et convertir.
+- Interface graphique locale avec onglets `Appliquer`, `Creer` et `Outils`
+- Layout adaptatif avec partie haute fixe
+- Seuls `Analyse et details` et `Journal` restent scrollables
+- Glisser-deposer de fichiers sur les champs Windows
+- Analyse rapide du patch charge avec format, validations et metadonnees
+- Creation et application de patchs sans hebergement
+- Verification de mises a jour depuis les releases GitHub
+- Mise a jour automatique alignee avec l'installateur Windows
+- Proposition d'installation automatique de `xdelta3.exe` pour les patchs `.xdelta` / `VCDiff`
+- Outil N64 pour convertir le byte order (`z64`, `v64`, `n64`)
+- CLI pour inspecter, appliquer, creer et convertir
 
 ## Formats supportes
 
@@ -59,44 +61,56 @@ rompatcher create "jeu_original.gba" "jeu_modifie.gba" --format bps --descriptio
 rompatcher n64-byteswap "jeu.v64" --target z64
 ```
 
-## Releases officielles
+## Distribution Windows
 
-Les binaires Windows officiels sont produits a distance depuis GitHub et publies dans les releases.
+Les releases officielles publient maintenant un installateur Windows Inno Setup :
 
-- Aucun `.exe` n'est conserve dans le depot.
-- Les repertoires `build/`, `dist/` et le fichier `RomPatcher.spec` sont des artefacts locaux ignores.
-- Les releases publient un seul fichier Windows : `RomPatcher-vX.Y.Z-win64.exe`.
-- Le bouton `Mise a jour` de l'application packagée telecharge les nouvelles versions depuis les releases publiques.
-- Le depot a ete allege pour la distribution : pas de suite de tests embarquee, pas de script de build local conserve.
+- fichier de release : `RomPatcher-Setup-vX.Y.Z-win64.exe`
+- installation dans `%LOCALAPPDATA%\Programs\RomPatcher Desktop`
+- icone integree a l'application et a l'installateur
+- dossier du menu Demarrer configurable pendant l'installation
+- option de raccourci bureau via case a cocher
+- lancement de l'application propose en fin d'installation
 
-## Workflow de release
+L'installateur est concu pour un usage simple sans hebergement externe : tout passe par les releases GitHub publiques.
 
-La release officielle se fait a partir d'un tag Git :
+## Workflow GitHub Actions
+
+Le workflow `.github/workflows/build-release.yml` :
+
+- valide la compilation des sources
+- verifie la coherence entre le tag Git et la version Python
+- construit `RomPatcher.exe` avec PyInstaller
+- compile l'installateur Inno Setup
+- publie l'artefact et la release GitHub
+
+Le build se lance :
+
+- sur un tag `vX.Y.Z`
+- ou manuellement via `workflow_dispatch`
+
+## Release officielle
 
 ```powershell
-python .\scripts\bump_version.py 1.0.0
+python .\scripts\bump_version.py 1.1.0
 git add .
-git commit -m "Release 1.0.0"
-git tag v1.0.0
+git commit -m "Release 1.1.0"
+git tag v1.1.0
 git push origin main
-git push origin v1.0.0
+git push origin v1.1.0
 ```
-
-Le workflow GitHub dans `.github/workflows/build-release.yml` :
-
-- valide la compilation des sources,
-- verifie la coherence entre le tag et la version Python,
-- construit l'executable Windows,
-- publie l'artefact et la release GitHub.
 
 ## Mise a jour automatique
 
-- verification de la derniere release GitHub depuis l'application packagée,
-- telechargement du nouvel `.exe`,
-- remplacement automatique du binaire,
-- redemarrage de l'application.
+Depuis l'application installee :
 
-Ce mecanisme repose uniquement sur les releases GitHub publiques.
+- RomPatcher verifie la derniere release GitHub
+- telecharge l'installateur correspondant
+- ferme l'application
+- lance l'installateur en mode silencieux
+- relance RomPatcher une fois la mise a jour terminee
+
+Ce mecanisme reste compatible avec les anciennes releases portables, mais les nouvelles releases officielles sont basees sur l'installateur Inno Setup.
 
 ## Dependances optionnelles
 
@@ -108,10 +122,10 @@ python -m pip install bsdiff4
 
 ### xdelta / VCDiff
 
-RomPatcher peut proposer le téléchargement automatique de `xdelta3.exe` quand un patch `VCDiff / xdelta` en a besoin.
+RomPatcher peut proposer le telechargement automatique de `xdelta3.exe` quand un patch `VCDiff / xdelta` en a besoin.
 
 En manuel, vous pouvez aussi placer `xdelta3.exe` :
 
 - dans le `PATH` de Windows
-- à cote de `RomPatcher.exe`
+- a cote de `RomPatcher.exe`
 - dans un dossier `tools/` voisin de l'application
