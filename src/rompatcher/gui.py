@@ -29,12 +29,50 @@ CREATE_FORMAT_HELP = {
 }
 
 
+class ScrollableNotebookFrame(ttk.Frame):
+    def __init__(self, parent: ttk.Notebook, *, background: str = "#eadfce") -> None:
+        super().__init__(parent, style="Shell.TFrame")
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+        self.canvas = tk.Canvas(self, background=background, borderwidth=0, highlightthickness=0)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.content = ttk.Frame(self.canvas, padding=(0, 0, 8, 0), style="Shell.TFrame")
+        self._window = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
+
+        self.content.bind("<Configure>", self._on_content_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self.canvas.bind("<Enter>", self._bind_mousewheel)
+        self.canvas.bind("<Leave>", self._unbind_mousewheel)
+        self.content.bind("<Enter>", self._bind_mousewheel)
+        self.content.bind("<Leave>", self._unbind_mousewheel)
+
+    def _on_content_configure(self, _event=None) -> None:
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event) -> None:
+        self.canvas.itemconfigure(self._window, width=event.width)
+
+    def _bind_mousewheel(self, _event=None) -> None:
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
+
+    def _unbind_mousewheel(self, _event=None) -> None:
+        self.canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event) -> None:
+        if event.delta:
+            self.canvas.yview_scroll(int(-event.delta / 120), "units")
+
+
 class RomPatcherApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("RomPatcher Desktop")
-        self.root.geometry("1180x860")
-        self.root.minsize(980, 760)
+        self._configure_root_geometry()
 
         self.apply_rom_var = tk.StringVar()
         self.apply_patch_var = tk.StringVar()
@@ -66,6 +104,18 @@ class RomPatcherApp:
         self._build_ui()
         self._refresh_create_help()
 
+    def _configure_root_geometry(self) -> None:
+        screen_width = max(self.root.winfo_screenwidth(), 1200)
+        screen_height = max(self.root.winfo_screenheight(), 900)
+        width = min(max(int(screen_width * 0.82), 1120), 1540)
+        height = min(max(int(screen_height * 0.84), 860), 1120)
+        min_width = min(width, 1024)
+        min_height = min(height, 780)
+        pos_x = max((screen_width - width) // 2, 0)
+        pos_y = max((screen_height - height) // 3, 0)
+        self.root.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+        self.root.minsize(min_width, min_height)
+
     def _configure_style(self) -> None:
         style = ttk.Style()
         try:
@@ -85,13 +135,14 @@ class RomPatcherApp:
         style.configure("Accent.TButton", font=("Bahnschrift", 10, "bold"))
         style.configure("TNotebook", background="#eadfce", borderwidth=0)
         style.configure("TNotebook.Tab", padding=(16, 10), font=("Bahnschrift", 10))
+        style.configure("TLabelframe", background="#f9f4ec")
+        style.configure("TLabelframe.Label", background="#f9f4ec", foreground="#22333b", font=("Bahnschrift", 10, "bold"))
 
     def _build_ui(self) -> None:
         shell = ttk.Frame(self.root, padding=18, style="Shell.TFrame")
         shell.pack(fill="both", expand=True)
         shell.columnconfigure(0, weight=1)
         shell.rowconfigure(1, weight=1)
-        shell.rowconfigure(2, weight=1)
 
         header = ttk.Frame(shell, style="Shell.TFrame")
         header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -107,27 +158,35 @@ class RomPatcherApp:
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
 
-        notebook = ttk.Notebook(shell)
-        notebook.grid(row=1, column=0, sticky="nsew")
+        self.main_paned = ttk.Panedwindow(shell, orient="vertical")
+        self.main_paned.grid(row=1, column=0, sticky="nsew")
 
-        apply_tab = ttk.Frame(notebook, padding=12, style="Shell.TFrame")
-        create_tab = ttk.Frame(notebook, padding=12, style="Shell.TFrame")
-        tools_tab = ttk.Frame(notebook, padding=12, style="Shell.TFrame")
-        notebook.add(apply_tab, text="Appliquer")
-        notebook.add(create_tab, text="Créer")
-        notebook.add(tools_tab, text="Outils")
+        self.workspace_frame = ttk.Frame(self.main_paned, style="Shell.TFrame")
+        self.workspace_frame.columnconfigure(0, weight=1)
+        self.workspace_frame.rowconfigure(0, weight=1)
+        self.main_paned.add(self.workspace_frame, weight=5)
 
-        self._build_apply_tab(apply_tab)
-        self._build_create_tab(create_tab)
-        self._build_tools_tab(tools_tab)
+        notebook = ttk.Notebook(self.workspace_frame)
+        notebook.grid(row=0, column=0, sticky="nsew")
 
-        bottom = ttk.Frame(shell, style="Shell.TFrame")
-        bottom.grid(row=2, column=0, sticky="nsew", pady=(12, 0))
-        bottom.columnconfigure(0, weight=3)
-        bottom.columnconfigure(1, weight=2)
-        bottom.rowconfigure(0, weight=1)
+        self.apply_tab = ScrollableNotebookFrame(notebook)
+        self.create_tab = ScrollableNotebookFrame(notebook)
+        self.tools_tab = ScrollableNotebookFrame(notebook)
+        notebook.add(self.apply_tab, text="Appliquer")
+        notebook.add(self.create_tab, text="Créer")
+        notebook.add(self.tools_tab, text="Outils")
 
-        info_card = ttk.Frame(bottom, padding=16, style="Card.TFrame")
+        self._build_apply_tab(self.apply_tab.content)
+        self._build_create_tab(self.create_tab.content)
+        self._build_tools_tab(self.tools_tab.content)
+
+        self.bottom_frame = ttk.Frame(self.main_paned, style="Shell.TFrame")
+        self.bottom_frame.columnconfigure(0, weight=3)
+        self.bottom_frame.columnconfigure(1, weight=2)
+        self.bottom_frame.rowconfigure(0, weight=1)
+        self.main_paned.add(self.bottom_frame, weight=2)
+
+        info_card = ttk.Frame(self.bottom_frame, padding=16, style="Card.TFrame")
         info_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         info_card.columnconfigure(0, weight=1)
         info_card.rowconfigure(1, weight=1)
@@ -136,7 +195,7 @@ class RomPatcherApp:
             info_card,
             wrap="word",
             font=("Consolas", 10),
-            height=12,
+            height=10,
             bg="#fffdf8",
             fg="#22333b",
             insertbackground="#22333b",
@@ -145,7 +204,7 @@ class RomPatcherApp:
         self.info_text.grid(row=1, column=0, sticky="nsew")
         self.info_text.configure(state="disabled")
 
-        log_card = ttk.Frame(bottom, padding=16, style="Panel.TFrame")
+        log_card = ttk.Frame(self.bottom_frame, padding=16, style="Panel.TFrame")
         log_card.grid(row=0, column=1, sticky="nsew")
         log_card.columnconfigure(0, weight=1)
         log_card.rowconfigure(1, weight=1)
@@ -154,7 +213,7 @@ class RomPatcherApp:
             log_card,
             wrap="word",
             font=("Consolas", 10),
-            height=12,
+            height=10,
             bg="#1d2b31",
             fg="#f4efe4",
             insertbackground="#f4efe4",
@@ -164,13 +223,25 @@ class RomPatcherApp:
         self.log_text.configure(state="disabled")
 
         footer = ttk.Frame(shell, style="Shell.TFrame")
-        footer.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        footer.grid(row=2, column=0, sticky="ew", pady=(12, 0))
         footer.columnconfigure(0, weight=1)
         footer.columnconfigure(1, weight=3)
         ttk.Label(footer, textvariable=self.status_var, style="Subhead.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0).grid(row=0, column=1, sticky="ew", padx=(12, 0))
+        self.root.after(0, self._position_main_sash)
+
+    def _position_main_sash(self) -> None:
+        self.root.update_idletasks()
+        try:
+            total_height = self.main_paned.winfo_height()
+            desired_top = max(480, int(total_height * 0.68))
+            max_top = max(total_height - 220, 320)
+            self.main_paned.sashpos(0, min(desired_top, max_top))
+        except tk.TclError:
+            pass
 
     def _build_apply_tab(self, parent: ttk.Frame) -> None:
+        parent.rowconfigure(0, weight=1)
         parent.columnconfigure(0, weight=3)
         parent.columnconfigure(1, weight=2)
 
@@ -181,7 +252,15 @@ class RomPatcherApp:
         ttk.Label(form, text="Appliquer un patch", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         self._file_picker_row(form, 1, "ROM source", self.apply_rom_var, self._pick_apply_rom)
         self._file_picker_row(form, 2, "Patch", self.apply_patch_var, self._pick_apply_patch)
-        self._file_picker_row(form, 3, "Sortie", self.apply_output_var, self._pick_apply_output, save=True)
+        self._file_picker_row(
+            form,
+            3,
+            "Sortie",
+            self.apply_output_var,
+            self._pick_apply_output,
+            save=True,
+            manual_override=self._mark_apply_output_manual,
+        )
 
         ttk.Checkbutton(
             form,
@@ -218,12 +297,14 @@ class RomPatcherApp:
             ),
             style="Info.TLabel",
             justify="left",
+            wraplength=420,
         ).grid(row=1, column=0, sticky="nw")
 
         self.apply_rom_var.trace_add("write", lambda *_: self._refresh_apply_output_suggestion())
         self.apply_patch_var.trace_add("write", lambda *_: self._refresh_apply_output_suggestion())
 
     def _build_create_tab(self, parent: ttk.Frame) -> None:
+        parent.rowconfigure(0, weight=1)
         parent.columnconfigure(0, weight=3)
         parent.columnconfigure(1, weight=2)
 
@@ -234,7 +315,15 @@ class RomPatcherApp:
         ttk.Label(form, text="Créer un patch", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         self._file_picker_row(form, 1, "Fichier original", self.create_original_var, self._pick_create_original)
         self._file_picker_row(form, 2, "Fichier modifié", self.create_modified_var, self._pick_create_modified)
-        self._file_picker_row(form, 3, "Patch de sortie", self.create_output_var, self._pick_create_output, save=True)
+        self._file_picker_row(
+            form,
+            3,
+            "Patch de sortie",
+            self.create_output_var,
+            self._pick_create_output,
+            save=True,
+            manual_override=self._mark_create_output_manual,
+        )
 
         format_row = ttk.Frame(form, style="Card.TFrame")
         format_row.grid(row=4, column=0, sticky="ew", pady=(6, 0))
@@ -263,7 +352,7 @@ class RomPatcherApp:
         ttk.Label(meta, text="Auteur").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Entry(meta, textvariable=self.create_author_var).grid(row=1, column=1, sticky="ew", pady=4)
         ttk.Label(meta, text="Description").grid(row=2, column=0, sticky="nw", padx=(0, 8), pady=4)
-        self.create_description_text = ScrolledText(meta, height=5, wrap="word", font=("Segoe UI", 10))
+        self.create_description_text = ScrolledText(meta, height=4, wrap="word", font=("Segoe UI", 10))
         self.create_description_text.grid(row=2, column=1, sticky="ew", pady=4)
 
         self.create_button = ttk.Button(form, text="Créer le patch", style="Accent.TButton", command=self._create_patch)
@@ -274,7 +363,7 @@ class RomPatcherApp:
         side.grid(row=0, column=1, sticky="nsew")
         side.columnconfigure(0, weight=1)
         ttk.Label(side, text="Guide format", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
-        self.create_help_label = ttk.Label(side, text="", style="Info.TLabel", justify="left")
+        self.create_help_label = ttk.Label(side, text="", style="Info.TLabel", justify="left", wraplength=420)
         self.create_help_label.grid(row=1, column=0, sticky="nw")
 
         self.create_original_var.trace_add("write", lambda *_: self._refresh_create_output_suggestion())
@@ -282,6 +371,7 @@ class RomPatcherApp:
         self.create_format_var.trace_add("write", lambda *_: self._refresh_create_output_suggestion())
 
     def _build_tools_tab(self, parent: ttk.Frame) -> None:
+        parent.rowconfigure(0, weight=1)
         parent.columnconfigure(0, weight=3)
         parent.columnconfigure(1, weight=2)
 
@@ -290,7 +380,15 @@ class RomPatcherApp:
         form.columnconfigure(0, weight=1)
         ttk.Label(form, text="Outils N64", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         self._file_picker_row(form, 1, "ROM N64", self.n64_input_var, self._pick_n64_input)
-        self._file_picker_row(form, 2, "Sortie", self.n64_output_var, self._pick_n64_output, save=True)
+        self._file_picker_row(
+            form,
+            2,
+            "Sortie",
+            self.n64_output_var,
+            self._pick_n64_output,
+            save=True,
+            manual_override=self._mark_n64_output_manual,
+        )
 
         row = ttk.Frame(form, style="Card.TFrame")
         row.grid(row=3, column=0, sticky="ew", pady=(6, 0))
@@ -318,12 +416,22 @@ class RomPatcherApp:
             ),
             style="Info.TLabel",
             justify="left",
+            wraplength=420,
         ).grid(row=1, column=0, sticky="nw")
 
         self.n64_input_var.trace_add("write", lambda *_: self._refresh_n64_output_suggestion())
         self.n64_target_var.trace_add("write", lambda *_: self._refresh_n64_output_suggestion())
 
-    def _file_picker_row(self, parent: ttk.Frame, row: int, label: str, variable: tk.StringVar, command, save: bool = False) -> None:
+    def _file_picker_row(
+        self,
+        parent: ttk.Frame,
+        row: int,
+        label: str,
+        variable: tk.StringVar,
+        command,
+        save: bool = False,
+        manual_override=None,
+    ) -> None:
         frame = ttk.Frame(parent, style="Card.TFrame")
         frame.grid(row=row, column=0, sticky="ew", pady=6)
         frame.columnconfigure(0, weight=1)
@@ -332,8 +440,21 @@ class RomPatcherApp:
         entry.grid(row=1, column=0, sticky="ew", padx=(0, 8))
         ttk.Button(frame, text="Parcourir", command=command).grid(row=1, column=1, sticky="ew")
         self._hook_dropfiles(entry, lambda files: self._assign_dropped_file(variable, files))
-        if save:
-            return
+        if save and manual_override is not None:
+            entry.bind("<KeyRelease>", manual_override)
+            entry.bind("<<Paste>>", lambda *_: self.root.after_idle(manual_override))
+
+    def _mark_apply_output_manual(self, _event=None) -> None:
+        if self.apply_output_var.get().strip():
+            self._apply_output_auto = False
+
+    def _mark_create_output_manual(self, _event=None) -> None:
+        if self.create_output_var.get().strip():
+            self._create_output_auto = False
+
+    def _mark_n64_output_manual(self, _event=None) -> None:
+        if self.n64_output_var.get().strip():
+            self._n64_output_auto = False
 
     def _hook_dropfiles(self, widget, callback) -> None:
         if windnd is None:
