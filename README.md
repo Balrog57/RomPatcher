@@ -65,6 +65,7 @@ Les binaires Windows officiels sont produits a distance depuis GitHub et publies
 - Les repertoires `build/`, `dist/` et le fichier `RomPatcher.spec` sont des artefacts locaux ignores.
 - Les releases publient un seul fichier Windows : `RomPatcher-vX.Y.Z-win64.exe`.
 - Le bouton `Mise a jour` de l'application packagée telecharge les nouvelles versions depuis les releases publiques.
+- Le depot a ete allege pour la distribution : pas de suite de tests embarquee, pas de script de build local conserve.
 
 ## Workflow de release
 
@@ -81,19 +82,10 @@ git push origin v1.0.0
 
 Le workflow GitHub dans `.github/workflows/build-release.yml` :
 
-- execute les tests,
+- valide la compilation des sources,
 - verifie la coherence entre le tag et la version Python,
 - construit l'executable Windows,
 - publie l'artefact et la release GitHub.
-
-## Build local optionnel
-
-Le build local n'est pas necessaire pour une release normale. Il reste disponible uniquement pour debug packaging :
-
-```powershell
-python -m pip install pyinstaller
-.\build_windows.ps1
-```
 
 ## Mise a jour automatique
 
