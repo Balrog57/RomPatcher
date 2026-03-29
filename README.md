@@ -107,4 +107,4 @@ python -m pip install bsdiff4
 
 ### xdelta / VCDiff
 
-Placez `xdelta3.exe` dans le `PATH` de Windows, ou dans un dossier `tools/` a la racine du projet.
+Placez `xdelta3.exe` dans le `PATH` de Windows, à cote de `RomPatcher.exe`, ou dans un dossier `tools/` voisin de l'application.
