@@ -34,6 +34,14 @@ class CLITests(unittest.TestCase):
         self.assertEqual(code, 0)
         launch_mock.assert_called_once_with()
 
+    def test_version_option_prints_current_version(self) -> None:
+        stdout = io.StringIO()
+        with self.assertRaises(SystemExit) as exit_info:
+            with redirect_stdout(stdout):
+                main(["--version"])
+        self.assertEqual(exit_info.exception.code, 0)
+        self.assertIn("0.2.0", stdout.getvalue())
+
     def test_inspect_command_prints_metadata(self) -> None:
         original = _write_temp_file("cli_inspect_original.bin", b"ABCDEFGH")
         modified = _write_temp_file("cli_inspect_modified.bin", b"ABCXEFGH")

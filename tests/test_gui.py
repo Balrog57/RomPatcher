@@ -72,6 +72,7 @@ class GuiTests(unittest.TestCase):
         self.assertIsInstance(self.app.apply_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.create_tab, ScrollableNotebookFrame)
         self.assertIsInstance(self.app.tools_tab, ScrollableNotebookFrame)
+        self.assertEqual(self.app.update_button.cget("text"), "Mise à jour")
 
     def test_apply_output_suggestion_switches_smc_to_sfc(self) -> None:
         self.app.apply_rom_var.set(str(Path("C:/tmp/game.smc")))

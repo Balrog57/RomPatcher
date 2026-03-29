@@ -8,6 +8,7 @@ from .core import apply_patch, create_patch, inspect_patch
 from .gui import launch
 from .models import PatchMetadata
 from .n64 import convert_n64_byte_order, default_n64_output_path
+from .version import APP_VERSION
 
 
 def _print_description(path: Path) -> None:
@@ -30,6 +31,7 @@ def _print_description(path: Path) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="RomPatcher Desktop")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {APP_VERSION}")
     subparsers = parser.add_subparsers(dest="command")
 
     inspect_parser = subparsers.add_parser("inspect", help="Analyser un patch")

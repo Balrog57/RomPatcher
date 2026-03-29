@@ -10,6 +10,14 @@ from tkinter.scrolledtext import ScrolledText
 from .core import apply_patch, create_patch, inspect_patch
 from .models import PatchMetadata
 from .n64 import convert_n64_byte_order, default_n64_output_path
+from .updater import (
+    download_release_asset,
+    find_available_update,
+    install_downloaded_update,
+    is_frozen_build,
+    open_releases_page,
+)
+from .version import APP_NAME, APP_VERSION
 
 try:
     import windnd  # type: ignore
@@ -71,7 +79,7 @@ class ScrollableNotebookFrame(ttk.Frame):
 class RomPatcherApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("RomPatcher Desktop")
+        self.root.title(f"{APP_NAME} {APP_VERSION}")
         self._configure_root_geometry()
 
         self.apply_rom_var = tk.StringVar()
@@ -92,7 +100,7 @@ class RomPatcherApp:
         self.n64_output_var = tk.StringVar()
         self.n64_target_var = tk.StringVar(value="z64")
 
-        self.status_var = tk.StringVar(value="Prêt.")
+        self.status_var = tk.StringVar(value=f"Prêt. Version {APP_VERSION}")
         self.progress_var = tk.DoubleVar(value=0.0)
 
         self._apply_output_auto = True
@@ -103,6 +111,8 @@ class RomPatcherApp:
         self._configure_style()
         self._build_ui()
         self._refresh_create_help()
+        if is_frozen_build():
+            self.root.after(1800, lambda: self._check_for_updates(automatic=True))
 
     def _configure_root_geometry(self) -> None:
         screen_width = max(self.root.winfo_screenwidth(), 1200)
@@ -146,10 +156,10 @@ class RomPatcherApp:
 
         header = ttk.Frame(shell, style="Shell.TFrame")
         header.grid(row=0, column=0, sticky="ew", pady=(0, 12))
-        ttk.Label(header, text="RomPatcher Desktop", style="Headline.TLabel").pack(anchor="w")
+        ttk.Label(header, text=APP_NAME, style="Headline.TLabel").pack(anchor="w")
         ttk.Label(
             header,
-            text="Application locale Windows pour appliquer, créer et préparer des patchs de ROMs et de binaires.",
+            text=f"Version {APP_VERSION} - application locale Windows pour appliquer, créer et préparer des patchs de ROMs et de binaires.",
             style="Subhead.TLabel",
         ).pack(anchor="w", pady=(2, 0))
         ttk.Label(
@@ -225,9 +235,13 @@ class RomPatcherApp:
         footer = ttk.Frame(shell, style="Shell.TFrame")
         footer.grid(row=2, column=0, sticky="ew", pady=(12, 0))
         footer.columnconfigure(0, weight=1)
-        footer.columnconfigure(1, weight=3)
+        footer.columnconfigure(3, weight=3)
         ttk.Label(footer, textvariable=self.status_var, style="Subhead.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0).grid(row=0, column=1, sticky="ew", padx=(12, 0))
+        ttk.Label(footer, text=f"v{APP_VERSION}", style="Subhead.TLabel").grid(row=0, column=1, sticky="e", padx=(12, 0))
+        self.update_button = ttk.Button(footer, text="Mise à jour", command=lambda: self._check_for_updates(automatic=False))
+        self.update_button.grid(row=0, column=2, sticky="e", padx=(12, 0))
+        ttk.Progressbar(footer, variable=self.progress_var, maximum=1.0).grid(row=0, column=3, sticky="ew", padx=(12, 0))
+        self._action_buttons.append(self.update_button)
         self.root.after(0, self._position_main_sash)
 
     def _position_main_sash(self) -> None:
@@ -577,6 +591,113 @@ class RomPatcherApp:
     def _on_create_format_changed(self) -> None:
         self._refresh_create_output_suggestion()
         self._refresh_create_help()
+
+    def _check_for_updates(self, *, automatic: bool) -> None:
+        self.status_var.set("Vérification des mises à jour...")
+        if not automatic:
+            self._append_log("[INFO] Vérification des mises à jour demandée.")
+
+        def action():
+            try:
+                return {
+                    "release": find_available_update(force_refresh=not automatic),
+                    "error": None,
+                }
+            except Exception as exc:
+                return {"release": None, "error": str(exc)}
+
+        self._run_async(action, lambda result: self._on_update_check_success(result, automatic))
+
+    def _on_update_check_success(self, result: dict[str, object], automatic: bool) -> None:
+        self._set_busy(False)
+        self.progress_var.set(0.0)
+
+        error = result.get("error")
+        if isinstance(error, str) and error:
+            self.status_var.set("Vérification des mises à jour indisponible.")
+            self._append_log(f"[INFO] {error}")
+            if not automatic:
+                messagebox.showerror("Mise à jour impossible", error)
+            return
+
+        release = result.get("release")
+        if release is None:
+            self.status_var.set(f"Version actuelle : {APP_VERSION}")
+            self._append_log("[INFO] Aucune mise à jour disponible.")
+            if not automatic:
+                messagebox.showinfo("Aucune mise à jour", f"Vous utilisez déjà la dernière version ({APP_VERSION}).")
+            return
+
+        self.status_var.set(f"Mise à jour disponible : v{release.version}")
+        self._append_log(f"[INFO] Nouvelle version détectée : v{release.version}")
+
+        prompt = (
+            f"La version v{release.version} est disponible.\n\n"
+            "Voulez-vous la télécharger et l'installer maintenant ?"
+        )
+        if is_frozen_build() and getattr(release, "asset", None) is not None:
+            if messagebox.askyesno("Mise à jour disponible", prompt):
+                self._download_and_install_update(release)
+            return
+
+        prompt = (
+            f"La version v{release.version} est disponible.\n\n"
+            "L'installation automatique fonctionne depuis l'exécutable Windows packagé.\n"
+            "Voulez-vous ouvrir la page des releases ?"
+        )
+        if not automatic and messagebox.askyesno("Mise à jour disponible", prompt):
+            open_releases_page(release.html_url)
+
+    def _download_and_install_update(self, release) -> None:
+        self.status_var.set(f"Téléchargement de la version v{release.version}...")
+        self._append_log(f"[INFO] Téléchargement de la mise à jour v{release.version}.")
+
+        def action():
+            try:
+                path = download_release_asset(
+                    release,
+                    progress=lambda value, message=None: self.root.after(0, self._on_progress, value, message),
+                )
+                return {"path": path, "error": None}
+            except Exception as exc:
+                return {"path": None, "error": str(exc)}
+
+        self._run_async(action, self._on_update_downloaded)
+
+    def _on_update_downloaded(self, result: dict[str, object]) -> None:
+        error = result.get("error")
+        if isinstance(error, str) and error:
+            self._set_busy(False)
+            self.progress_var.set(0.0)
+            self.status_var.set("Téléchargement de la mise à jour échoué.")
+            self._append_log(f"[ERREUR] {error}")
+            messagebox.showerror("Mise à jour échouée", error)
+            return
+
+        downloaded_path = result.get("path")
+        if not isinstance(downloaded_path, Path):
+            self._set_busy(False)
+            self.progress_var.set(0.0)
+            self.status_var.set("Téléchargement de la mise à jour échoué.")
+            messagebox.showerror("Mise à jour échouée", "Le fichier téléchargé est introuvable.")
+            return
+
+        try:
+            script_path = install_downloaded_update(downloaded_path)
+        except Exception as exc:
+            self._on_failure(exc, traceback.format_exc())
+            return
+
+        self._set_busy(False)
+        self.progress_var.set(1.0)
+        self.status_var.set("Mise à jour prête. Redémarrage en cours...")
+        self._append_log(f"[OK] Mise à jour téléchargée : {downloaded_path}")
+        self._append_log(f"[INFO] Script d'installation lancé : {script_path}")
+        messagebox.showinfo(
+            "Mise à jour prête",
+            "La nouvelle version a été téléchargée. L'application va se fermer puis redémarrer.",
+        )
+        self.root.after(350, self.root.destroy)
 
     def _set_text(self, widget: ScrolledText, text: str) -> None:
         widget.configure(state="normal")

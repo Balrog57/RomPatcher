@@ -1,0 +1,85 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pyinstaller
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -v
+
+      - name: Validate tag version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = (python -c "import sys; sys.path.insert(0, 'src'); from rompatcher.version import APP_VERSION; print(APP_VERSION)").Trim()
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            throw "Le tag ${{ github.ref_name }} ne correspond pas à la version du code v$version."
+          }
+
+      - name: Build executable
+        shell: pwsh
+        run: |
+          .\build_windows.ps1 -Python python
+
+      - name: Prepare release assets
+        id: package
+        shell: pwsh
+        run: |
+          $version = (python -c "import sys; sys.path.insert(0, 'src'); from rompatcher.version import APP_VERSION; print(APP_VERSION)").Trim()
+          $assetName = "RomPatcher-v$version-win64.exe"
+          Copy-Item "dist\RomPatcher.exe" "dist\$assetName" -Force
+          $hash = (Get-FileHash "dist\$assetName" -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path "dist\$assetName.sha256" -Value $hash -Encoding ascii
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "asset_name=$assetName" >> $env:GITHUB_OUTPUT
+          "asset_path=dist/$assetName" >> $env:GITHUB_OUTPUT
+          "checksum_path=dist/$assetName.sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RomPatcher-v${{ steps.package.outputs.version }}-win64
+          path: |
+            ${{ steps.package.outputs.asset_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: RomPatcher ${{ steps.package.outputs.version }}
+          files: |
+            ${{ steps.package.outputs.asset_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          generate_release_notes: true
