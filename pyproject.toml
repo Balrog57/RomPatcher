@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rompatcher-desktop"
+version = "0.1.0"
+description = "Patcher local de ROMs et de binaires, en Python, avec GUI Windows."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Marc" }]
+dependencies = [
+    "windnd>=1.0.7; platform_system == 'Windows'",
+]
+
+[project.scripts]
+rompatcher = "rompatcher.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
