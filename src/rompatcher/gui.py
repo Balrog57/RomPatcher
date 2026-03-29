@@ -228,12 +228,12 @@ class RomPatcherApp:
 
         self.bottom_frame = ttk.Frame(shell, style="Shell.TFrame")
         self.bottom_frame.grid(row=2, column=0, sticky="nsew", pady=(12, 0))
-        self.bottom_frame.columnconfigure(0, weight=3)
-        self.bottom_frame.columnconfigure(1, weight=2)
+        self.bottom_frame.columnconfigure(0, weight=1, uniform="bottom-split")
+        self.bottom_frame.columnconfigure(1, weight=1, uniform="bottom-split")
         self.bottom_frame.rowconfigure(0, weight=1)
 
         info_card = ttk.Frame(self.bottom_frame, padding=16, style="Card.TFrame")
-        info_card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        info_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         info_card.columnconfigure(0, weight=1)
         info_card.rowconfigure(1, weight=1)
         ttk.Label(info_card, text="Analyse et détails", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 8))
@@ -251,7 +251,7 @@ class RomPatcherApp:
         self.info_text.configure(state="disabled")
 
         log_card = ttk.Frame(self.bottom_frame, padding=16, style="Panel.TFrame")
-        log_card.grid(row=0, column=1, sticky="nsew")
+        log_card.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
         log_card.columnconfigure(0, weight=1)
         log_card.rowconfigure(1, weight=1)
         ttk.Label(log_card, text="Journal", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 8))
@@ -282,11 +282,11 @@ class RomPatcherApp:
 
     def _build_apply_tab(self, parent: ttk.Frame) -> None:
         parent.rowconfigure(0, weight=1)
-        parent.columnconfigure(0, weight=3)
-        parent.columnconfigure(1, weight=2)
+        parent.columnconfigure(0, weight=1, uniform="tab-split")
+        parent.columnconfigure(1, weight=1, uniform="tab-split")
 
         form = ttk.Frame(parent, padding=16, style="Card.TFrame")
-        form.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        form.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         form.columnconfigure(0, weight=1)
 
         ttk.Label(form, text="Appliquer un patch", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
@@ -325,7 +325,7 @@ class RomPatcherApp:
         self._action_buttons.extend([self.inspect_button, self.apply_button])
 
         side = ttk.Frame(parent, padding=16, style="Panel.TFrame")
-        side.grid(row=0, column=1, sticky="nsew")
+        side.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
         side.columnconfigure(0, weight=1)
         ttk.Label(side, text="Conseils", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         ttk.Label(
@@ -345,11 +345,11 @@ class RomPatcherApp:
 
     def _build_create_tab(self, parent: ttk.Frame) -> None:
         parent.rowconfigure(0, weight=1)
-        parent.columnconfigure(0, weight=3)
-        parent.columnconfigure(1, weight=2)
+        parent.columnconfigure(0, weight=1, uniform="tab-split")
+        parent.columnconfigure(1, weight=1, uniform="tab-split")
 
         form = ttk.Frame(parent, padding=16, style="Card.TFrame")
-        form.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        form.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         form.columnconfigure(0, weight=1)
 
         ttk.Label(form, text="Créer un patch", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
@@ -411,7 +411,7 @@ class RomPatcherApp:
         self._action_buttons.append(self.create_button)
 
         side = ttk.Frame(parent, padding=16, style="Panel.TFrame")
-        side.grid(row=0, column=1, sticky="nsew")
+        side.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
         side.columnconfigure(0, weight=1)
         ttk.Label(side, text="Guide format", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         self.create_help_label = ttk.Label(side, text="", style="Info.TLabel", justify="left", wraplength=420)
@@ -423,11 +423,11 @@ class RomPatcherApp:
 
     def _build_tools_tab(self, parent: ttk.Frame) -> None:
         parent.rowconfigure(0, weight=1)
-        parent.columnconfigure(0, weight=3)
-        parent.columnconfigure(1, weight=2)
+        parent.columnconfigure(0, weight=1, uniform="tab-split")
+        parent.columnconfigure(1, weight=1, uniform="tab-split")
 
         form = ttk.Frame(parent, padding=16, style="Card.TFrame")
-        form.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        form.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
         form.columnconfigure(0, weight=1)
         ttk.Label(form, text="Outils N64", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         self._file_picker_row(form, 1, "ROM N64", self.n64_input_var, self._pick_n64_input)
@@ -454,7 +454,7 @@ class RomPatcherApp:
         self._action_buttons.append(self.n64_button)
 
         side = ttk.Frame(parent, padding=16, style="Panel.TFrame")
-        side.grid(row=0, column=1, sticky="nsew")
+        side.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
         side.columnconfigure(0, weight=1)
         ttk.Label(side, text="Rappel", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 10))
         ttk.Label(
