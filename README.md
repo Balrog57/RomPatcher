@@ -1,6 +1,6 @@
 # RomPatcher Desktop
 
-Patcher Windows autonome pour appliquer, creer, analyser et convertir des patchs de ROMs et de binaires, en Python, sans serveur ni hebergement.
+Patcher Windows autonome pour appliquer, creer, analyser et convertir des patchs de ROMs et de binaires.
 
 ## Fonctionnalites
 

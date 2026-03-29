@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rompatcher-desktop"
 version = "1.0.0"
-description = "Patcher Windows autonome pour ROMs et binaires, en Python, sans serveur."
+description = "Patcher Windows autonome pour appliquer, créer, analyser et convertir des patchs de ROMs et de binaires."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Marc" }]
